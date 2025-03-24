@@ -5,38 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fixture Table</title>
     <style>
-        :root {
-            --bg-color: #ffffff;
-            --text-color: #000000;
-            --table-header-bg: #f4f4f4;
-            --button-bg: #ddd;
-        }
-        body.dark-mode {
-            --bg-color: #121212;
-            --text-color: #ffffff;
-            --table-header-bg: #333;
-            --button-bg: #444;
-        }
         body {
             font-family: Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
             margin: 20px;
             padding: 20px;
+            background-color: #121212;
+            color: white;
         }
-        button, input {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-            background-color: var(--button-bg);
-            color: var(--text-color);
+        .light-mode {
+            background-color: white;
+            color: black;
+        }
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px;
+            border: none;
             cursor: pointer;
+            border-radius: 5px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 16px;
         }
         th, td {
             padding: 10px;
@@ -44,48 +38,40 @@
             text-align: left;
         }
         th {
-            background-color: var(--table-header-bg);
+            background-color: #333;
+            color: white;
+            cursor: pointer;
         }
-        .sort-button {
-            font-size: 14px;
-            margin-left: 5px;
-            padding: 5px;
+        .light-mode th {
+            background-color: #f4f4f4;
+            color: black;
         }
-        @media (max-width: 768px) {
-            table {
-                display: block;
-                overflow-x: auto;
-                white-space: nowrap;
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
             }
-            th, td {
-                padding: 8px;
+            table, th, td {
                 font-size: 14px;
             }
         }
     </style>
 </head>
-<body class="dark-mode">
+<body>
 
     <h2>Fixture Table</h2>
     <div id="controls">
-        <button id="themeToggle" onclick="toggleDarkMode()">Switch to Light Mode</button>
-        <button id="breakerToggle" onclick="toggleBreaker()">Breaker rating: 100%</button>
         <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
         <datalist id="manufacturerOptions"></datalist>
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
+        <button onclick="toggleTheme()">Toggle Light/Dark Mode</button>
+        <button onclick="toggleBreaker()">Breaker rating: <span id="breakerLabel">100%</span></button>
     </div>
 
     <table id="dataTable">
         <thead>
             <tr>
-                <th>
-                    Manufacturer 
-                    <button class="sort-button" id="sortManufacturer" onclick="toggleSort('manufacturer')">Sort: A-Z</button>
-                </th>
-                <th>
-                    Fixture 
-                    <button class="sort-button" id="sortFixture" onclick="toggleSort('fixture')">Sort: A-Z</button>
-                </th>
+                <th onclick="sortTable('manufacturer')">Manufacturer</th>
+                <th onclick="sortTable('fixture')">Fixture</th>
                 <th>Wattage</th>
                 <th>208V 20A</th>
                 <th>120V 20A</th>
@@ -96,60 +82,39 @@
     </table>
 
     <script>
-        let use80PercentBreaker = false;
-        let sortManufacturerAsc = true;
-        let sortFixtureAsc = true;
-        let sortBy = "manufacturer"; // Default sorting by Manufacturer
+        const jsonDataUrl = "fixtures.json"; // Update this with your actual JSON file path
+        let fixtures = [];
+        let sortState = { manufacturer: 1, fixture: 1 };
+        let breakerRating = 1.0; // 100% load
 
         async function fetchData() {
-            const response = await fetch("fixtures.json");
-            const data = await response.json();
-            sortTable(data);
+            const response = await fetch(jsonDataUrl);
+            fixtures = await response.json();
+            updateTable();
+            populateManufacturerDropdown();
         }
 
-        function toggleSort(column) {
-            if (column === "manufacturer") {
-                sortManufacturerAsc = !sortManufacturerAsc;
-                document.getElementById("sortManufacturer").innerText = `Sort: ${sortManufacturerAsc ? "A-Z" : "Z-A"}`;
-            } else if (column === "fixture") {
-                sortFixtureAsc = !sortFixtureAsc;
-                document.getElementById("sortFixture").innerText = `Sort: ${sortFixtureAsc ? "A-Z" : "Z-A"}`;
-            }
-            sortBy = column;
-            fetchData();
-        }
-
-        function sortTable(data) {
-            data.sort((a, b) => {
-                let primarySort = a[sortBy].localeCompare(b[sortBy]);
-                if (sortBy === "manufacturer" && primarySort === 0) {
-                    return a.fixture.localeCompare(b.fixture);
-                }
-                return sortBy === "manufacturer" 
-                    ? (sortManufacturerAsc ? primarySort : -primarySort) 
-                    : (sortFixtureAsc ? primarySort : -primarySort);
-            });
-
-            populateTable(data);
-        }
-
-        function populateTable(data) {
+        function updateTable() {
             const tableBody = document.querySelector("#dataTable tbody");
             tableBody.innerHTML = "";
+            let manufacturerFilter = document.getElementById("manufacturerFilter").value.toLowerCase();
+            let fixtureFilter = document.getElementById("fixtureFilter").value.toLowerCase();
 
-            data.forEach(item => {
-                let wattage = parseInt(item.wattage);
-                let breakerFactor = use80PercentBreaker ? 0.8 : 1;
-                let is208Only = item["208_only"];
+            let filteredFixtures = fixtures.filter(f => 
+                f.manufacturer.toLowerCase().includes(manufacturerFilter) &&
+                f.fixture.toLowerCase().includes(fixtureFilter)
+            );
 
-                let on208V = Math.floor((20 * 208 * breakerFactor) / wattage);
-                let on120V20A = is208Only ? "N/A" : Math.floor((20 * 120 * breakerFactor) / wattage);
-                let on120V15A = is208Only ? "N/A" : Math.floor((15 * 120 * breakerFactor) / wattage);
+            filteredFixtures.forEach(f => {
+                let wattage = f.wattage;
+                let on208V = Math.floor((20 * 208 * breakerRating) / wattage);
+                let on120V20A = f["208 only"] ? "N/A" : Math.floor((20 * 120 * breakerRating) / wattage);
+                let on120V15A = f["208 only"] ? "N/A" : Math.floor((15 * 120 * breakerRating) / wattage);
 
                 let tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${item.manufacturer}</td>
-                    <td>${item.fixture}</td>
+                    <td>${f.manufacturer}</td>
+                    <td>${f.fixture}</td>
                     <td>${wattage}</td>
                     <td>${on208V}</td>
                     <td>${on120V20A}</td>
@@ -157,17 +122,14 @@
                 `;
                 tableBody.appendChild(tr);
             });
-            populateManufacturerDropdown();
+        }
+
+        function filterTable() {
+            updateTable();
         }
 
         function populateManufacturerDropdown() {
-            let manufacturerSet = new Set();
-            let rows = document.querySelectorAll("#dataTable tbody tr");
-            
-            rows.forEach(row => {
-                manufacturerSet.add(row.cells[0].innerText);
-            });
-
+            let manufacturerSet = new Set(fixtures.map(f => f.manufacturer));
             let manufacturerOptions = document.getElementById("manufacturerOptions");
             manufacturerOptions.innerHTML = "";
             manufacturerSet.forEach(manufacturer => {
@@ -177,37 +139,27 @@
             });
         }
 
-        function filterTable() {
-            let manufacturer = document.getElementById("manufacturerFilter").value.toLowerCase();
-            let fixture = document.getElementById("fixtureFilter").value.toLowerCase();
-            let rows = document.querySelectorAll("#dataTable tbody tr");
-            
-            rows.forEach(row => {
-                let manufacturerText = row.cells[0].innerText.toLowerCase();
-                let fixtureText = row.cells[1].innerText.toLowerCase();
-                let matchesManufacturer = manufacturer === "" || manufacturerText.includes(manufacturer);
-                let matchesFixture = fixtureText.includes(fixture);
-                row.style.display = matchesManufacturer && matchesFixture ? "" : "none";
+        function sortTable(column) {
+            fixtures.sort((a, b) => {
+                let valA = a[column].toLowerCase();
+                let valB = b[column].toLowerCase();
+                return valA.localeCompare(valB) * sortState[column];
             });
+            sortState[column] *= -1; // Toggle sort order
+            updateTable();
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle("light-mode");
         }
 
         function toggleBreaker() {
-            use80PercentBreaker = !use80PercentBreaker;
-            document.getElementById("breakerToggle").innerText = use80PercentBreaker 
-                ? "Breaker rating: 80%" 
-                : "Breaker rating: 100%";
-            fetchData();
+            breakerRating = breakerRating === 1.0 ? 0.8 : 1.0;
+            document.getElementById("breakerLabel").innerText = breakerRating === 1.0 ? "100%" : "80%";
+            updateTable();
         }
 
-        function toggleDarkMode() {
-            document.body.classList.toggle("dark-mode");
-            let isDarkMode = document.body.classList.contains("dark-mode");
-            document.getElementById("themeToggle").innerText = isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode";
-        }
-
-        window.onload = function() {
-            fetchData();
-        };
+        window.onload = fetchData;
     </script>
 </body>
 </html>
