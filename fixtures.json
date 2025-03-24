@@ -10,5 +10,11 @@
         "fixture": "Beam 750",
         "wattage": 750,
         "208_only": false
+    },
+    {
+        "manufacturer": "Clay Paky",
+        "fixture": "Sharpy",
+        "wattage": 500,
+        "208_only": false
     }
 ]
