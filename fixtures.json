@@ -16,5 +16,11 @@
         "fixture": "Sharpy",
         "wattage": 500,
         "208_only": false
+    },
+    {
+        "manufacturer": "Clay Paky",
+        "fixture": "Alpa beam",
+        "wattage": 800,
+        "208_only": false
     }
 ]
