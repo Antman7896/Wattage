@@ -1,6 +1,14 @@
 [
-    { "manufacturer": "Aryton", "fixture": "Verosi", "wattage": 1200 },
-    { "manufacturer": "Elation", "fixture": "Beam 750", "wattage": 750 },
-    { "manufacturer": "Clay Paky", "fixture": "Sharpy", "wattage": 500 },
-    { "manufacturer": "Acme", "fixture": "Gemini", "wattage": 200 }
+    {
+        "manufacturer": "Aryton",
+        "fixture": "Verosi",
+        "wattage": 1200,
+        "208_only": true
+    },
+    {
+        "manufacturer": "Elation",
+        "fixture": "Beam 750",
+        "wattage": 750,
+        "208_only": false
+    }
 ]
