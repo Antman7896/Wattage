@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixture Table</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+        #filters { margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #f4f4f4; }
+    </style>
+    <script>
+        async function loadTable() {
+            const response = await fetch("data.json");
+            const data = await response.json();
+            let tableBody = document.getElementById("tableBody");
+            tableBody.innerHTML = "";
+            data.forEach(row => {
+                let on208V = Math.floor((20 * 208) / row.wattage);
+                let on120V = Math.floor((20 * 120) / row.wattage);
+                let tr = document.createElement("tr");
+                tr.innerHTML = `<td>${row.manufacturer}</td><td>${row.fixture_name}</td><td>${row.wattage}</td><td>${on208V}</td><td>${on120V}</td>`;
+                tableBody.appendChild(tr);
+            });
+        }
+    </script>
+</head>
+<body onload="loadTable()">
+    <h2>Fixture Table</h2>
+    <div id="filters">
+        <input type="text" id="searchManufacturer" placeholder="Search Manufacturer..." onkeyup="filterTable()">
+        <input type="text" id="searchFixture" placeholder="Search Fixture Name..." onkeyup="filterTable()">
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Manufacturer</th>
+                <th>Fixture Name</th>
+                <th>Wattage</th>
+                <th># on 208V 20A</th>
+                <th># on 120V 20A</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+    <script>
+        function filterTable() {
+            let manufacturer = document.getElementById("searchManufacturer").value.toLowerCase();
+            let fixture = document.getElementById("searchFixture").value.toLowerCase();
+            let rows = document.querySelectorAll("#tableBody tr");
+            rows.forEach(row => {
+                let manufacturerText = row.cells[0].innerText.toLowerCase();
+                let fixtureText = row.cells[1].innerText.toLowerCase();
+                row.style.display = (manufacturerText.includes(manufacturer) && fixtureText.includes(fixture)) ? "" : "none";
+            });
+        }
+    </script>
+</body>
+</html>
