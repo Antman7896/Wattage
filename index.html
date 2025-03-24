@@ -24,12 +24,6 @@
             margin: 20px;
             padding: 20px;
         }
-        #controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
         button, input {
             padding: 10px;
             border: 1px solid #ccc;
@@ -52,6 +46,11 @@
         th {
             background-color: var(--table-header-bg);
         }
+        .sort-button {
+            font-size: 14px;
+            margin-left: 5px;
+            padding: 5px;
+        }
         @media (max-width: 768px) {
             table {
                 display: block;
@@ -62,9 +61,6 @@
                 padding: 8px;
                 font-size: 14px;
             }
-            #controls {
-                flex-direction: column;
-            }
         }
     </style>
 </head>
@@ -74,7 +70,6 @@
     <div id="controls">
         <button id="themeToggle" onclick="toggleDarkMode()">Switch to Light Mode</button>
         <button id="breakerToggle" onclick="toggleBreaker()">Breaker rating: 100%</button>
-        <button id="sortButton" onclick="toggleSortOrder()">Sort: A-Z</button>
         <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
         <datalist id="manufacturerOptions"></datalist>
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
@@ -83,8 +78,14 @@
     <table id="dataTable">
         <thead>
             <tr>
-                <th>Manufacturer</th>
-                <th>Fixture</th>
+                <th>
+                    Manufacturer 
+                    <button class="sort-button" id="sortManufacturer" onclick="toggleSort('manufacturer')">Sort: A-Z</button>
+                </th>
+                <th>
+                    Fixture 
+                    <button class="sort-button" id="sortFixture" onclick="toggleSort('fixture')">Sort: A-Z</button>
+                </th>
                 <th>Wattage</th>
                 <th>208V 20A</th>
                 <th>120V 20A</th>
@@ -96,7 +97,9 @@
 
     <script>
         let use80PercentBreaker = false;
-        let sortAscending = true;
+        let sortManufacturerAsc = true;
+        let sortFixtureAsc = true;
+        let sortBy = "manufacturer"; // Default sorting by Manufacturer
 
         async function fetchData() {
             const response = await fetch("fixtures.json");
@@ -104,26 +107,30 @@
             sortTable(data);
         }
 
-        function sortTable(data) {
-            data.sort((a, b) => {
-                let manufacturerCompare = a.manufacturer.localeCompare(b.manufacturer);
-                if (manufacturerCompare === 0) {
-                    return a.fixture.localeCompare(b.fixture);
-                }
-                return manufacturerCompare;
-            });
-
-            if (!sortAscending) {
-                data.reverse();
+        function toggleSort(column) {
+            if (column === "manufacturer") {
+                sortManufacturerAsc = !sortManufacturerAsc;
+                document.getElementById("sortManufacturer").innerText = `Sort: ${sortManufacturerAsc ? "A-Z" : "Z-A"}`;
+            } else if (column === "fixture") {
+                sortFixtureAsc = !sortFixtureAsc;
+                document.getElementById("sortFixture").innerText = `Sort: ${sortFixtureAsc ? "A-Z" : "Z-A"}`;
             }
-
-            populateTable(data);
+            sortBy = column;
+            fetchData();
         }
 
-        function toggleSortOrder() {
-            sortAscending = !sortAscending;
-            document.getElementById("sortButton").innerText = sortAscending ? "Sort: A-Z" : "Sort: Z-A";
-            fetchData();
+        function sortTable(data) {
+            data.sort((a, b) => {
+                let primarySort = a[sortBy].localeCompare(b[sortBy]);
+                if (sortBy === "manufacturer" && primarySort === 0) {
+                    return a.fixture.localeCompare(b.fixture);
+                }
+                return sortBy === "manufacturer" 
+                    ? (sortManufacturerAsc ? primarySort : -primarySort) 
+                    : (sortFixtureAsc ? primarySort : -primarySort);
+            });
+
+            populateTable(data);
         }
 
         function populateTable(data) {
