@@ -5,48 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fixture Table</title>
     <style>
-        /* Dark Mode Styles */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --table-header-bg: #f4f4f4;
+            --button-bg: #ddd;
+        }
+        body.dark-mode {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --table-header-bg: #333;
+            --button-bg: #444;
+        }
         body {
             font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 20px;
             padding: 20px;
-            background-color: #121212;
-            color: #ffffff;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        /* Light Mode */
-        body.light-mode {
-            background-color: #ffffff;
-            color: #000000;
         }
         #controls {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 10px;
         }
-        button {
+        button, input {
             padding: 10px;
-            border: none;
+            border: 1px solid #ccc;
             border-radius: 5px;
-            cursor: pointer;
             font-size: 16px;
-        }
-        #themeToggle {
-            background-color: #444;
-            color: white;
-        }
-        #themeToggle.light-mode {
-            background-color: #ddd;
-            color: black;
-        }
-        #breakerToggle {
-            background-color: #007bff;
-            color: white;
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            cursor: pointer;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            font-size: 16px;
         }
         th, td {
             padding: 10px;
@@ -54,25 +50,34 @@
             text-align: left;
         }
         th {
-            background-color: #333;
-            color: white;
+            background-color: var(--table-header-bg);
         }
-        .light-mode th {
-            background-color: #f4f4f4;
-            color: black;
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            th, td {
+                padding: 8px;
+                font-size: 14px;
+            }
+            #controls {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
-<body>
+<body class="dark-mode">
 
     <h2>Fixture Table</h2>
-    
     <div id="controls">
+        <button id="themeToggle" onclick="toggleDarkMode()">Switch to Light Mode</button>
+        <button id="breakerToggle" onclick="toggleBreaker()">Breaker rating: 100%</button>
+        <button id="sortButton" onclick="toggleSortOrder()">Sort: A-Z</button>
         <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
         <datalist id="manufacturerOptions"></datalist>
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
-        <button id="themeToggle" onclick="toggleTheme()">Toggle Light/Dark Mode</button>
-        <button id="breakerToggle" onclick="toggleBreaker()">80% Rated Breaker: OFF</button>
     </div>
 
     <table id="dataTable">
@@ -91,57 +96,67 @@
 
     <script>
         let use80PercentBreaker = false;
+        let sortAscending = true;
 
         async function fetchData() {
-            const response = await fetch("data.json");
+            const response = await fetch("fixtures.json");
             const data = await response.json();
+            sortTable(data);
+        }
+
+        function sortTable(data) {
+            data.sort((a, b) => {
+                let manufacturerCompare = a.manufacturer.localeCompare(b.manufacturer);
+                if (manufacturerCompare === 0) {
+                    return a.fixture.localeCompare(b.fixture);
+                }
+                return manufacturerCompare;
+            });
+
+            if (!sortAscending) {
+                data.reverse();
+            }
+
             populateTable(data);
         }
-function populateTable(data) {
-    const tableBody = document.querySelector("#dataTable tbody");
-    tableBody.innerHTML = "";
 
-    data.forEach(item => {
-        let wattage = parseInt(item.wattage);
-        let breakerFactor = use80PercentBreaker ? 0.8 : 1;
-        let is208Only = item["208_only"];
+        function toggleSortOrder() {
+            sortAscending = !sortAscending;
+            document.getElementById("sortButton").innerText = sortAscending ? "Sort: A-Z" : "Sort: Z-A";
+            fetchData();
+        }
 
-        let on208V = Math.floor((20 * 208 * breakerFactor) / wattage);
-        let on120V20A = is208Only ? "N/A" : Math.floor((20 * 120 * breakerFactor) / wattage);
-        let on120V15A = is208Only ? "N/A" : Math.floor((15 * 120 * breakerFactor) / wattage);
+        function populateTable(data) {
+            const tableBody = document.querySelector("#dataTable tbody");
+            tableBody.innerHTML = "";
 
-        let tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${item.manufacturer}</td>
-            <td>${item.fixture}</td>
-            <td>${wattage}</td>
-            <td>${on208V}</td>
-            <td>${on120V20A}</td>
-            <td>${on120V15A}</td>
-        `;
-        tableBody.appendChild(tr);
-    });
-    populateManufacturerDropdown();
-}
+            data.forEach(item => {
+                let wattage = parseInt(item.wattage);
+                let breakerFactor = use80PercentBreaker ? 0.8 : 1;
+                let is208Only = item["208_only"];
 
-        function filterTable() {
-            let manufacturer = document.getElementById("manufacturerFilter").value.toLowerCase();
-            let fixture = document.getElementById("fixtureFilter").value.toLowerCase();
-            let rows = document.querySelectorAll("#dataTable tbody tr");
+                let on208V = Math.floor((20 * 208 * breakerFactor) / wattage);
+                let on120V20A = is208Only ? "N/A" : Math.floor((20 * 120 * breakerFactor) / wattage);
+                let on120V15A = is208Only ? "N/A" : Math.floor((15 * 120 * breakerFactor) / wattage);
 
-            rows.forEach(row => {
-                let manufacturerText = row.cells[0].innerText.toLowerCase();
-                let fixtureText = row.cells[1].innerText.toLowerCase();
-                let matchesManufacturer = manufacturer === "" || manufacturerText.includes(manufacturer);
-                let matchesFixture = fixtureText.includes(fixture);
-                row.style.display = matchesManufacturer && matchesFixture ? "" : "none";
+                let tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${item.manufacturer}</td>
+                    <td>${item.fixture}</td>
+                    <td>${wattage}</td>
+                    <td>${on208V}</td>
+                    <td>${on120V20A}</td>
+                    <td>${on120V15A}</td>
+                `;
+                tableBody.appendChild(tr);
             });
+            populateManufacturerDropdown();
         }
 
         function populateManufacturerDropdown() {
             let manufacturerSet = new Set();
             let rows = document.querySelectorAll("#dataTable tbody tr");
-
+            
             rows.forEach(row => {
                 manufacturerSet.add(row.cells[0].innerText);
             });
@@ -155,22 +170,37 @@ function populateTable(data) {
             });
         }
 
-        function toggleTheme() {
-            document.body.classList.toggle("light-mode");
-            document.getElementById("themeToggle").classList.toggle("light-mode");
+        function filterTable() {
+            let manufacturer = document.getElementById("manufacturerFilter").value.toLowerCase();
+            let fixture = document.getElementById("fixtureFilter").value.toLowerCase();
+            let rows = document.querySelectorAll("#dataTable tbody tr");
+            
+            rows.forEach(row => {
+                let manufacturerText = row.cells[0].innerText.toLowerCase();
+                let fixtureText = row.cells[1].innerText.toLowerCase();
+                let matchesManufacturer = manufacturer === "" || manufacturerText.includes(manufacturer);
+                let matchesFixture = fixtureText.includes(fixture);
+                row.style.display = matchesManufacturer && matchesFixture ? "" : "none";
+            });
         }
 
-     function toggleBreaker() {
-    use80PercentBreaker = !use80PercentBreaker;
-    document.getElementById("breakerToggle").innerText = use80PercentBreaker 
-        ? "Breaker rating: 80%" 
-        : "Breaker rating: 100%";
-    fetchData(); // Reload data with new breaker setting
-}
+        function toggleBreaker() {
+            use80PercentBreaker = !use80PercentBreaker;
+            document.getElementById("breakerToggle").innerText = use80PercentBreaker 
+                ? "Breaker rating: 80%" 
+                : "Breaker rating: 100%";
+            fetchData();
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            let isDarkMode = document.body.classList.contains("dark-mode");
+            document.getElementById("themeToggle").innerText = isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode";
+        }
+
         window.onload = function() {
             fetchData();
         };
     </script>
-
 </body>
 </html>
