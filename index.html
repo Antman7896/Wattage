@@ -160,14 +160,13 @@
             document.getElementById("themeToggle").classList.toggle("light-mode");
         }
 
-        function toggleBreaker() {
-            use80PercentBreaker = !use80PercentBreaker;
-            document.getElementById("breakerToggle").innerText = use80PercentBreaker 
-                ? "80% Rated Breaker: ON" 
-                : "80% Rated Breaker: OFF";
-            fetchData(); // Reload data with new breaker setting
-        }
-
+     function toggleBreaker() {
+    use80PercentBreaker = !use80PercentBreaker;
+    document.getElementById("breakerToggle").innerText = use80PercentBreaker 
+        ? "Breaker rating: 80%" 
+        : "Breaker rating: 100%";
+    fetchData(); // Reload data with new breaker setting
+}
         window.onload = function() {
             fetchData();
         };
