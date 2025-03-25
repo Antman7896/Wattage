@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suggest a Fixture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #121212;
+            color: white;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+        }
+        input, button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Suggest a Fixture</h2>
+        <input type="text" id="manufacturer" placeholder="Manufacturer">
+        <input type="text" id="fixture" placeholder="Fixture Name">
+        <input type="number" id="wattage" placeholder="Wattage">
+        <button onclick="submitSuggestion()">Submit</button>
+    </div>
+
+    <script>
+        function submitSuggestion() {
+            let manufacturer = document.getElementById("manufacturer").value;
+            let fixture = document.getElementById("fixture").value;
+            let wattage = document.getElementById("wattage").value;
+
+            if (!manufacturer || !fixture || !wattage) {
+                alert("Please fill out all fields.");
+                return;
+            }
+
+            let suggestionData = {
+                manufacturer: manufacturer,
+                fixture: fixture,
+                wattage: parseInt(wattage),
+                "208_only": true
+            };
+
+            let mailtoLink = `mailto:Suggestions@Wattage.info?subject=Fixture Suggestion&body=${encodeURIComponent(JSON.stringify(suggestionData, null, 2))}`;
+            window.location.href = mailtoLink;
+        }
+    </script>
+
+</body>
+</html>
