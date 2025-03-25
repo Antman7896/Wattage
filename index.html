@@ -7,26 +7,25 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
             background-color: #121212;
             color: white;
+            margin: 20px;
+            padding: 20px;
         }
         .light-mode {
             background-color: white;
             color: black;
         }
-        #controls {
+        #filters {
             display: flex;
-            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 10px;
         }
-        button {
-            padding: 8px;
-            border: none;
-            cursor: pointer;
+        #manufacturerFilter, #fixtureFilter {
+            padding: 10px;
+            border: 1px solid #ccc;
             border-radius: 5px;
+            font-size: 16px;
         }
         table {
             width: 100%;
@@ -45,27 +44,44 @@
             background-color: #f4f4f4;
             color: black;
         }
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            table, th, td {
-                font-size: 14px;
-            }
+        button {
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+        }
+        .light-mode button {
+            background-color: #0056b3;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
-    <h2>Fixture Table</h2>
-    <div id="controls">
+    <div class="container">
+        <h2>Fixture Table</h2>
+        <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        <button onclick="window.location.href='https://docs.google.com/forms/d/e/1FAIpQLSeqQliLQtNW-l3ksz231kxfoZht9YFT9qJJolxlpiwdEaaWXw/viewform?usp=header'">
+            Suggestion/Report Error
+        </button>
+    </div>
+
+    <div id="filters">
         <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
         <datalist id="manufacturerOptions"></datalist>
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
-        <button onclick="toggleTheme()">Toggle Light/Dark Mode</button>
-        <button onclick="toggleBreaker()">Breaker rating: <span id="breakerLabel">100%</span></button>
-        <button onclick="window.location.href='suggest.html'">Suggest a Fixture</button>
     </div>
+
+    <button id="breakerToggle" onclick="toggleBreakerRating()">Breaker rating: 100%</button>
 
     <table id="dataTable">
         <thead>
@@ -82,63 +98,46 @@
     </table>
 
     <script>
-        const jsonDataUrl = "fixtures.json"; 
-        let fixtures = [];
-        let breakerRating = 1.0;
+        let breakerRating = 1.0; // Default to 100%
+        let darkMode = true;
 
-        async function fetchData() {
-            const response = await fetch(jsonDataUrl);
-            fixtures = await response.json();
-            sortFixtures();
-            updateTable();
-            populateManufacturerDropdown();
+        async function fetchJSONData() {
+            const response = await fetch("fixtures.json");
+            const data = await response.json();
+            populateTable(data);
         }
 
-        function sortFixtures() {
-            fixtures.sort((a, b) => {
-                let manufacturerCompare = a.manufacturer.localeCompare(b.manufacturer);
-                return manufacturerCompare !== 0 ? manufacturerCompare : a.fixture.localeCompare(b.fixture);
-            });
-        }
-
-        function updateTable() {
+        function populateTable(data) {
             const tableBody = document.querySelector("#dataTable tbody");
             tableBody.innerHTML = "";
-            let manufacturerFilter = document.getElementById("manufacturerFilter").value.toLowerCase();
-            let fixtureFilter = document.getElementById("fixtureFilter").value.toLowerCase();
 
-            let filteredFixtures = fixtures.filter(f => 
-                f.manufacturer.toLowerCase().includes(manufacturerFilter) &&
-                f.fixture.toLowerCase().includes(fixtureFilter)
-            );
+            data.sort((a, b) => a.manufacturer.localeCompare(b.manufacturer) || a.fixture.localeCompare(b.fixture));
 
-            filteredFixtures.forEach(f => {
-                let wattage = f.wattage;
-                let on208V = Math.floor((20 * 208 * breakerRating) / wattage);
-                let on120V20A = f["208 only"] ? "N/A" : Math.floor((20 * 120 * breakerRating) / wattage);
-                let on120V15A = f["208 only"] ? "N/A" : Math.floor((15 * 120 * breakerRating) / wattage);
+            data.forEach(item => {
+                const on208V = Math.floor((20 * 208 * breakerRating) / item.wattage);
+                const on120V20A = item["208_only"] ? "N/A" : Math.floor((20 * 120 * breakerRating) / item.wattage);
+                const on120V15A = item["208_only"] ? "N/A" : Math.floor((15 * 120 * breakerRating) / item.wattage);
 
                 let tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${f.manufacturer}</td>
-                    <td>${f.fixture}</td>
-                    <td>${wattage}</td>
+                    <td>${item.manufacturer}</td>
+                    <td>${item.fixture}</td>
+                    <td>${item.wattage}</td>
                     <td>${on208V}</td>
                     <td>${on120V20A}</td>
                     <td>${on120V15A}</td>
                 `;
                 tableBody.appendChild(tr);
             });
+
+            populateManufacturerDropdown(data);
         }
 
-        function filterTable() {
-            updateTable();
-        }
-
-        function populateManufacturerDropdown() {
-            let manufacturerSet = new Set(fixtures.map(f => f.manufacturer));
+        function populateManufacturerDropdown(data) {
+            let manufacturerSet = new Set(data.map(item => item.manufacturer));
             let manufacturerOptions = document.getElementById("manufacturerOptions");
             manufacturerOptions.innerHTML = "";
+
             manufacturerSet.forEach(manufacturer => {
                 let option = document.createElement("option");
                 option.value = manufacturer;
@@ -146,17 +145,33 @@
             });
         }
 
-        function toggleTheme() {
-            document.body.classList.toggle("light-mode");
+        function filterTable() {
+            let manufacturer = document.getElementById("manufacturerFilter").value.toLowerCase();
+            let fixture = document.getElementById("fixtureFilter").value.toLowerCase();
+            let rows = document.querySelectorAll("#dataTable tbody tr");
+
+            rows.forEach(row => {
+                let manufacturerText = row.cells[0].innerText.toLowerCase();
+                let fixtureText = row.cells[1].innerText.toLowerCase();
+                let matchesManufacturer = manufacturer === "" || manufacturerText.includes(manufacturer);
+                let matchesFixture = fixtureText.includes(fixture);
+                row.style.display = matchesManufacturer && matchesFixture ? "" : "none";
+            });
         }
 
-        function toggleBreaker() {
+        function toggleBreakerRating() {
             breakerRating = breakerRating === 1.0 ? 0.8 : 1.0;
-            document.getElementById("breakerLabel").innerText = breakerRating === 1.0 ? "100%" : "80%";
-            updateTable();
+            document.getElementById("breakerToggle").innerText = `Breaker rating: ${breakerRating === 1.0 ? "100%" : "80%"}`;
+            fetchJSONData();
         }
 
-        window.onload = fetchData;
+        function toggleDarkMode() {
+            darkMode = !darkMode;
+            document.body.classList.toggle("light-mode", !darkMode);
+        }
+
+        window.onload = fetchJSONData;
     </script>
+
 </body>
 </html>
