@@ -40,7 +40,6 @@
         th {
             background-color: #333;
             color: white;
-            cursor: pointer;
         }
         .light-mode th {
             background-color: #f4f4f4;
@@ -70,8 +69,8 @@
     <table id="dataTable">
         <thead>
             <tr>
-                <th onclick="sortTable('manufacturer')">Manufacturer</th>
-                <th onclick="sortTable('fixture')">Fixture</th>
+                <th>Manufacturer</th>
+                <th>Fixture</th>
                 <th>Wattage</th>
                 <th>208V 20A</th>
                 <th>120V 20A</th>
@@ -84,14 +83,21 @@
     <script>
         const jsonDataUrl = "fixtures.json"; // Update this with your actual JSON file path
         let fixtures = [];
-        let sortState = { manufacturer: 1, fixture: 1 };
         let breakerRating = 1.0; // 100% load
 
         async function fetchData() {
             const response = await fetch(jsonDataUrl);
             fixtures = await response.json();
+            sortFixtures();
             updateTable();
             populateManufacturerDropdown();
+        }
+
+        function sortFixtures() {
+            fixtures.sort((a, b) => {
+                let manufacturerCompare = a.manufacturer.localeCompare(b.manufacturer);
+                return manufacturerCompare !== 0 ? manufacturerCompare : a.fixture.localeCompare(b.fixture);
+            });
         }
 
         function updateTable() {
@@ -137,16 +143,6 @@
                 option.value = manufacturer;
                 manufacturerOptions.appendChild(option);
             });
-        }
-
-        function sortTable(column) {
-            fixtures.sort((a, b) => {
-                let valA = a[column].toLowerCase();
-                let valB = b[column].toLowerCase();
-                return valA.localeCompare(valB) * sortState[column];
-            });
-            sortState[column] *= -1; // Toggle sort order
-            updateTable();
         }
 
         function toggleTheme() {
