@@ -64,6 +64,7 @@
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
         <button onclick="toggleTheme()">Toggle Light/Dark Mode</button>
         <button onclick="toggleBreaker()">Breaker rating: <span id="breakerLabel">100%</span></button>
+        <button onclick="window.location.href='suggest.html'">Suggest a Fixture</button>
     </div>
 
     <table id="dataTable">
@@ -81,9 +82,9 @@
     </table>
 
     <script>
-        const jsonDataUrl = "fixtures.json"; // Update this with your actual JSON file path
+        const jsonDataUrl = "fixtures.json"; 
         let fixtures = [];
-        let breakerRating = 1.0; // 100% load
+        let breakerRating = 1.0;
 
         async function fetchData() {
             const response = await fetch(jsonDataUrl);
