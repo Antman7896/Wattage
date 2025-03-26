@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixture Table</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #121212;
+            color: white;
+        }
+        #filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        #manufacturerFilter, #fixtureFilter {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 100%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #1e1e1e;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+            cursor: pointer;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .light-mode {
+            background-color: white;
+            color: black;
+        }
+        .light-mode table {
+            background-color: white;
+            color: black;
+        }
+        .light-mode th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Fixture Table</h2>
+    <button id="themeToggle">Switch to Light Mode</button>
+    <button id="breakerToggle">Breaker rating: 100%</button>
+    <div id="filters">
+        <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
+        <datalist id="manufacturerOptions"></datalist>
+        <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
+    </div>
+
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>Manufacturer</th>
+                <th>Fixture Name</th>
+                <th>Wattage</th>
+                <th>208V 20A</th>
+                <th>120V 20A</th>
+                <th>120V 15A</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const SHEET_CSV_URL = "YOUR_GOOGLE_SHEET_CSV_LINK_HERE"; // Replace with your Google Sheets CSV link
+        let breakerRating = 1; // 1 for 100%, 0.8 for 80%
+
+        async function fetchSheetData() {
+            try {
+                const response = await fetch(SHEET_CSV_URL);
+                const data = await response.text();
+                const rows = data.split("\n").slice(1); // Skip header row
+                const tableBody = document.querySelector("#dataTable tbody");
+                tableBody.innerHTML = "";
+
+                rows.forEach(row => {
+                    const columns = row.split(",");
+                    if (columns.length >= 4) {
+                        let manufacturer = columns[0].trim();
+                        let fixture = columns[1].trim();
+                        let wattage = parseInt(columns[2].trim());
+                        let is208Only = columns[3].trim().toLowerCase() === "true";
+
+                        let on208V = Math.floor((20 * 208 * breakerRating) / wattage);
+                        let on120V20A = is208Only ? "N/A" : Math.floor((20 * 120 * breakerRating) / wattage);
+                        let on120V15A = is208Only ? "N/A" : Math.floor((15 * 120 * breakerRating) / wattage);
+
+                        let tr = document.createElement("tr");
+                        tr.innerHTML = `<td>${manufacturer}</td><td>${fixture}</td><td>${wattage}</td><td>${on208V}</td><td>${on120V20A}</td><td>${on120V15A}</td>`;
+                        tableBody.appendChild(tr);
+                    }
+                });
+
+                populateManufacturerDropdown();
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        function filterTable() {
+            let manufacturer = document.getElementById("manufacturerFilter").value.toLowerCase();
+            let fixture = document.getElementById("fixtureFilter").value.toLowerCase();
+            let rows = document.querySelectorAll("#dataTable tbody tr");
+
+            rows.forEach(row => {
+                let manufacturerText = row.cells[0].innerText.toLowerCase();
+                let fixtureText = row.cells[1].innerText.toLowerCase();
+                let matchesManufacturer = manufacturer === "" || manufacturerText.includes(manufacturer);
+                let matchesFixture = fixtureText.includes(fixture);
+                row.style.display = matchesManufacturer && matchesFixture ? "" : "none";
+            });
+        }
+
+        function populateManufacturerDropdown() {
+            let manufacturerSet = new Set();
+            let rows = document.querySelectorAll("#dataTable tbody tr");
+
+            rows.forEach(row => {
+                manufacturerSet.add(row.cells[0].innerText);
+            });
+
+            let manufacturerOptions = document.getElementById("manufacturerOptions");
+            manufacturerOptions.innerHTML = "";
+            manufacturerSet.forEach(manufacturer => {
+                let option = document.createElement("option");
+                option.value = manufacturer;
+                manufacturerOptions.appendChild(option);
+            });
+        }
+
+        document.getElementById("themeToggle").addEventListener("click", function () {
+            document.body.classList.toggle("light-mode");
+            this.textContent = document.body.classList.contains("light-mode") ? "Switch to Dark Mode" : "Switch to Light Mode";
+        });
+
+        document.getElementById("breakerToggle").addEventListener("click", function () {
+            breakerRating = breakerRating === 1 ? 0.8 : 1;
+            this.textContent = `Breaker rating: ${breakerRating === 1 ? "100%" : "80%"}`;
+            fetchSheetData(); // Refresh the table with new calculations
+        });
+
+        window.onload = fetchSheetData;
+    </script>
+
+</body>
+</html>
