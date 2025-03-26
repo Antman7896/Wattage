@@ -7,29 +7,32 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: white;
             margin: 20px;
             padding: 20px;
-        }
-        .light-mode {
-            background-color: white;
-            color: black;
+            background-color: #121212;
+            color: white;
+            text-align: center;
         }
         #filters {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 10px;
+            justify-content: center;
         }
         #manufacturerFilter, #fixtureFilter {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
+            width: 100%;
+            max-width: 300px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
+            background-color: #1e1e1e;
+            margin-top: 10px;
         }
         th, td {
             padding: 10px;
@@ -38,56 +41,52 @@
         }
         th {
             background-color: #333;
-            color: white;
-        }
-        .light-mode th {
-            background-color: #f4f4f4;
-            color: black;
+            cursor: pointer;
         }
         button {
             padding: 10px;
-            margin: 5px;
-            cursor: pointer;
             border: none;
             border-radius: 5px;
-            background-color: #007bff;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .light-mode {
+            background-color: white;
+            color: black;
+        }
+        .light-mode table {
+            background-color: white;
+            color: black;
+        }
+        .light-mode th {
+            background-color: #f4f4f4;
+        }
+        #suggestionButton {
+            background-color: #007BFF;
             color: white;
-            font-size: 16px;
-        }
-        .light-mode button {
-            background-color: #0056b3;
-        }
-        .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>Fixture Table</h2>
-        <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
-        <button onclick="window.location.href='https://docs.google.com/forms/d/e/1FAIpQLSeqQliLQtNW-l3ksz231kxfoZht9YFT9qJJolxlpiwdEaaWXw/viewform?usp=header'">
-            Suggest a Fixture/Report an Error
-        </button>
-    </div>
+    <h2>Fixture Table</h2>
+    <button id="themeToggle">Switch to Light Mode</button>
+    <button id="breakerToggle">Breaker rating: 100%</button>
+    <button id="suggestionButton" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSeqQliLQtNW-l3ksz231kxfoZht9YFT9qJJolxlpiwdEaaWXw/viewform?usp=sf_link', '_blank')">
+        Suggest a Fixture / Report an Issue
+    </button>
 
     <div id="filters">
         <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
         <datalist id="manufacturerOptions"></datalist>
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
-        <button id="breakerToggle" onclick="toggleBreakerRating()">Breaker rating: 100%</button>
     </div>
-
 
     <table id="dataTable">
         <thead>
             <tr>
                 <th>Manufacturer</th>
-                <th>Fixture</th>
+                <th>Fixture Name</th>
                 <th>Wattage</th>
                 <th>208V 20A</th>
                 <th>120V 20A</th>
@@ -98,51 +97,39 @@
     </table>
 
     <script>
-        let breakerRating = 1.0; // Default to 100%
-        let darkMode = true;
+        const SHEET_CSV_URL = "YOUR_GOOGLE_SHEET_CSV_LINK_HERE"; // Replace with your Google Sheets CSV link
+        let breakerRating = 1; // 1 for 100%, 0.8 for 80%
 
-        async function fetchJSONData() {
-            const response = await fetch("fixtures.json");
-            const data = await response.json();
-            populateTable(data);
-        }
+        async function fetchSheetData() {
+            try {
+                const response = await fetch(SHEET_CSV_URL);
+                const data = await response.text();
+                const rows = data.split("\n").slice(1); // Skip header row
+                const tableBody = document.querySelector("#dataTable tbody");
+                tableBody.innerHTML = "";
 
-        function populateTable(data) {
-            const tableBody = document.querySelector("#dataTable tbody");
-            tableBody.innerHTML = "";
+                rows.forEach(row => {
+                    const columns = row.split(",");
+                    if (columns.length >= 4) {
+                        let manufacturer = columns[0].trim();
+                        let fixture = columns[1].trim();
+                        let wattage = parseInt(columns[2].trim());
+                        let is208Only = columns[3].trim().toLowerCase() === "true";
 
-            data.sort((a, b) => a.manufacturer.localeCompare(b.manufacturer) || a.fixture.localeCompare(b.fixture));
+                        let on208V = Math.floor((20 * 208 * breakerRating) / wattage);
+                        let on120V20A = is208Only ? "N/A" : Math.floor((20 * 120 * breakerRating) / wattage);
+                        let on120V15A = is208Only ? "N/A" : Math.floor((15 * 120 * breakerRating) / wattage);
 
-            data.forEach(item => {
-                const on208V = Math.floor((20 * 208 * breakerRating) / item.wattage);
-                const on120V20A = item["208_only"] ? "N/A" : Math.floor((20 * 120 * breakerRating) / item.wattage);
-                const on120V15A = item["208_only"] ? "N/A" : Math.floor((15 * 120 * breakerRating) / item.wattage);
+                        let tr = document.createElement("tr");
+                        tr.innerHTML = `<td>${manufacturer}</td><td>${fixture}</td><td>${wattage}</td><td>${on208V}</td><td>${on120V20A}</td><td>${on120V15A}</td>`;
+                        tableBody.appendChild(tr);
+                    }
+                });
 
-                let tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${item.manufacturer}</td>
-                    <td>${item.fixture}</td>
-                    <td>${item.wattage}</td>
-                    <td>${on208V}</td>
-                    <td>${on120V20A}</td>
-                    <td>${on120V15A}</td>
-                `;
-                tableBody.appendChild(tr);
-            });
-
-            populateManufacturerDropdown(data);
-        }
-
-        function populateManufacturerDropdown(data) {
-            let manufacturerSet = new Set(data.map(item => item.manufacturer));
-            let manufacturerOptions = document.getElementById("manufacturerOptions");
-            manufacturerOptions.innerHTML = "";
-
-            manufacturerSet.forEach(manufacturer => {
-                let option = document.createElement("option");
-                option.value = manufacturer;
-                manufacturerOptions.appendChild(option);
-            });
+                populateManufacturerDropdown();
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
         }
 
         function filterTable() {
@@ -159,18 +146,35 @@
             });
         }
 
-        function toggleBreakerRating() {
-            breakerRating = breakerRating === 1.0 ? 0.8 : 1.0;
-            document.getElementById("breakerToggle").innerText = `Breaker rating: ${breakerRating === 1.0 ? "100%" : "80%"}`;
-            fetchJSONData();
+        function populateManufacturerDropdown() {
+            let manufacturerSet = new Set();
+            let rows = document.querySelectorAll("#dataTable tbody tr");
+
+            rows.forEach(row => {
+                manufacturerSet.add(row.cells[0].innerText);
+            });
+
+            let manufacturerOptions = document.getElementById("manufacturerOptions");
+            manufacturerOptions.innerHTML = "";
+            manufacturerSet.forEach(manufacturer => {
+                let option = document.createElement("option");
+                option.value = manufacturer;
+                manufacturerOptions.appendChild(option);
+            });
         }
 
-        function toggleDarkMode() {
-            darkMode = !darkMode;
-            document.body.classList.toggle("light-mode", !darkMode);
-        }
+        document.getElementById("themeToggle").addEventListener("click", function () {
+            document.body.classList.toggle("light-mode");
+            this.textContent = document.body.classList.contains("light-mode") ? "Switch to Dark Mode" : "Switch to Light Mode";
+        });
 
-        window.onload = fetchJSONData;
+        document.getElementById("breakerToggle").addEventListener("click", function () {
+            breakerRating = breakerRating === 1 ? 0.8 : 1;
+            this.textContent = `Breaker rating: ${breakerRating === 1 ? "100%" : "80%"}`;
+            fetchSheetData(); // Refresh the table with new calculations
+        });
+
+        window.onload = fetchSheetData;
     </script>
 
 </body>
