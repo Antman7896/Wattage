@@ -71,7 +71,7 @@
         <h2>Fixture Table</h2>
         <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
         <button onclick="window.location.href='https://docs.google.com/forms/d/e/1FAIpQLSeqQliLQtNW-l3ksz231kxfoZht9YFT9qJJolxlpiwdEaaWXw/viewform?usp=header'">
-            Suggestion/Report Error
+            Suggest a Fixture/Report an Error
         </button>
     </div>
 
@@ -79,9 +79,9 @@
         <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
         <datalist id="manufacturerOptions"></datalist>
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
+        <button id="breakerToggle" onclick="toggleBreakerRating()">Breaker rating: 100%</button>
     </div>
 
-    <button id="breakerToggle" onclick="toggleBreakerRating()">Breaker rating: 100%</button>
 
     <table id="dataTable">
         <thead>
