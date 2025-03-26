@@ -61,9 +61,18 @@
         .light-mode th {
             background-color: #f4f4f4;
         }
-        #suggestionButton {
-            background-color: #007BFF;
-            color: white;
+         .suggest-button {
+             background-color: white;
+        color: black;
+    border: 1px solid black;
+}
+
+/* Blue button for "Breaker rating:" */
+.breaker-button {
+    background-color: blue;
+    color: white;
+    border: 1px solid blue;
+}
         }
     </style>
 </head>
@@ -71,15 +80,15 @@
 
     <h2>Fixture Table</h2>
     <button id="themeToggle">Switch to Light Mode</button>
-    <button id="suggestionButton" onclick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSeqQliLQtNW-l3ksz231kxfoZht9YFT9qJJolxlpiwdEaaWXw/viewform?usp=sf_link', '_blank')">
-        Suggest a Fixture / Report an Issue
-    </button>
+    <a href="https://docs.google.com/forms/d/e/1FAIpQLSeqQliLQtNW-l3ksz231kxfoZht9YFT9qJJolxlpiwdEaaWXw/viewform?usp=header" target="_blank">
+    <button class="suggest-button">Suggest a Fixture / Report an Issue</button>
+</a>
 
     <div id="filters">
         <input list="manufacturerOptions" id="manufacturerFilter" placeholder="Search Manufacturer..." oninput="filterTable()">
         <datalist id="manufacturerOptions"></datalist>
         <input type="text" id="fixtureFilter" placeholder="Search Fixture Name..." onkeyup="filterTable()">
-        <button id="breakerToggle">Breaker rating: 100%</button>
+        <button id="breakerToggle" class="breaker-button">Breaker rating: 100%</button>
     </div>
 
     <table id="dataTable">
